@@ -37,7 +37,11 @@ def parse_knowledge_panel(cmpt, sub_rank=0) -> list:
         ] 
 
     # Get all text
+    # previous class id missed some overviews
     if cmpt.find("div", {"class": "Fzsovc"}):
+        parsed['sub_type'] = 'ai_overview'
+    # adding alternative class id for ai_overview
+    elif cmpt.find("div", {"class": "ZKfmAf"}):
         parsed['sub_type'] = 'ai_overview'
     elif cmpt.find("div", {"class":"pxiwBd"}):
         parsed['sub_type'] = 'featured_results'

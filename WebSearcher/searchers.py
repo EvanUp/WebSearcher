@@ -238,16 +238,21 @@ class SearchEngine:
         }
         self.browser_info['browser_id'] = utils.hash_id(json.dumps(self.browser_info))
         self.log.debug(json.dumps(self.browser_info, indent=4))
+        self.driver.get("https://www.google.com/")
 
     def _send_chromedriver_typed_query(self):
         """Send a typed query to the search box"""
-        time.sleep(2)
-        self.driver.get('https://www.google.com')
-        time.sleep(2)
+        #search_box = self.driver.find_element(By.NAME, "q")
         search_box = self.driver.find_element(By.ID, "APjFqb")
         search_box.clear()
         search_box.send_keys(self.qry)
         search_box.send_keys(Keys.RETURN)
+        self.html = self.driver.page_source
+        self.url = self.driver.current_url
+        self.response_code = 0
+        log_msg = f"{self.response_code} | {self.qry}"
+        log_msg = f"{log_msg} | {self.loc}" if self.loc else log_msg
+        self.log.info(log_msg)
 
     def _send_chromedriver_request(self):
         """Use a prepared URL to conduct a search"""
@@ -273,24 +278,28 @@ class SearchEngine:
         """Send a search request and handle errors"""
         if not self.driver:
             self._init_chromedriver()
-
         self.timestamp = datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
         self.serp_id = serp_id if serp_id else utils.hash_id(self.qry + self.loc + self.timestamp)
         self.crawl_id = crawl_id
         try:
-            self._send_chromedriver_request()
+            self._send_chromedriver_typed_query()
+            time.sleep(2)
             self.html = self.driver.page_source
         except:
             self.log.exception(f'SERP | Chromedriver error | {self.serp_id}')
 
         if ai_expand:
+            #time.sleep(1)
             self._expand_ai_overview()
         self.driver.delete_all_cookies()
 
     def _expand_ai_overview(self):
         """Expand AI overview box by clicking it"""
-        show_more_button_xpath = "//div[@jsname='rPRdsc' and @role='button']"
+        #show_more_button_xpath = "//div[@jsname='rPRdsc' and @role='button']"
         show_all_button_xpath = '//div[contains(@class, "trEk7e") and @role="button"]'
+        show_more_button_xpath = "//div[@role='button' and .//span[text()='Show more']]"
+        
+
 
         try:
             self.driver.find_element(By.XPATH, show_more_button_xpath)
@@ -304,6 +313,9 @@ class SearchEngine:
                     EC.element_to_be_clickable((By.XPATH, show_more_button_xpath))
                 )
                 if show_more_button is not None:
+                    # sometimes show_more_button returns a list..
+                    if isinstance(show_more_button, list):
+                    	show_more_button = show_more_button[0]
                     show_more_button.click()
                     try:
                         time.sleep(2) # Wait for additional content to load
